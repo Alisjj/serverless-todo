@@ -1,4 +1,4 @@
-import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
+import { CustomAuthorizerResult } from 'aws-lambda'
 import 'source-map-support/register'
 
 import { verify, decode } from 'jsonwebtoken'
@@ -15,7 +15,7 @@ const logger = createLogger('auth')
 const jwksUrl = 'https://dev-5y1u2ujd.us.auth0.com/.well-known/jwks.json'
 
 export const handler = async (
-  event: CustomAuthorizerEvent
+  event
 ): Promise<CustomAuthorizerResult> => {
   logger.info('Authorizing a user', event.authorizationToken)
   try {
@@ -70,7 +70,7 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
       && key.kid           // The `kid` must be present to be useful for later
       && ((key.x5c && key.x5c.length) || (key.n && key.e)) // Has useful public keys
     ).map(key => {
-      return { kid: key.kid, nbf: key.nbf, publicKey: certToPEM(key.x5c[0]) };
+      return { kid: key.kid, nbf: key.nbf, publicKey: (key.x5c[0]) };
     }
     )
 

@@ -1,11 +1,11 @@
-import { TodosAccess } from './todosAcess'
-import { AttachmentUtils } from './attachmentUtils';
+import { TodosAccess } from '../dataLayer/todosAcess'
+import { AttachmentUtils } from '../helpers/attachmentUtils';
 import { TodoItem } from '../models/TodoItem'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
-import { createLogger } from '../utils/logger'
 import * as uuid from 'uuid'
 import * as createError from 'http-errors'
+import { TodoUpdate } from '../models/TodoUpdate';
 
 // TODO: Implement businessLogic
 const todoAccess = new TodosAccess()
@@ -32,30 +32,23 @@ export async function createTodo(
     return await todoAccess.createTodo(newTodo)
 }
 
+// create update todo function
 export async function updateTodo(
     todoId: string,
-    updateTodoRequest: UpdateTodoRequest,
-    userId: string
-): Promise<TodoItem> {
+    userId: string,
+    updateTodoRequest: UpdateTodoRequest
+): Promise<TodoUpdate> {
     const todo = await todoAccess.getTodoById(todoId)
 
+    if (!todo) {
+        throw new createError.NotFound(`Todo with id ${todoId} not found`)
+    }
+
     if (todo.userId !== userId) {
-        throw new createError.Unauthorized('You are not authorized to update this todo')
+        throw new createError.Unauthorized(`User ${userId} is not authorized to update todo ${todoId}`)
     }
 
-    if (updateTodoRequest.name) {
-        todo.name = updateTodoRequest.name
-    }
-
-    if (updateTodoRequest.dueDate) {
-        todo.dueDate = updateTodoRequest.dueDate
-    }
-
-    if (updateTodoRequest.done) {
-        todo.done = updateTodoRequest.done
-    }
-
-    return await todoAccess.updateTodo(userId, todoId)
+    return await todoAccess.updateTodo(todoId, updateTodoRequest)
 }
 
 export async function getTodosForUser(userId: string): Promise<TodoItem[]> {
