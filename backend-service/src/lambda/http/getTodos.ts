@@ -1,5 +1,6 @@
 import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import { TodoItem } from '../../models/TodoItem'
 import * as middy from 'middy'
 import { cors } from 'middy/middlewares'
 
@@ -13,23 +14,14 @@ export const handler = middy(
     const userId = getUserId(event)
     
     // Write your code here
-    const result = await getTodosForUser(userId)
-    const todos = result
-
+    const items = await getTodosForUser(userId) as TodoItem[]
     return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify({
-        items: todos
+      'statusCode': 200,
+      'body': JSON.stringify({
+        items: items
       })  
     }
   }
-)
-
-handler.use(
-  cors({
-    credentials: true
-  })
-)
+).use(cors({
+  credentials: true
+}))

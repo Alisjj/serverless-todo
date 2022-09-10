@@ -14,18 +14,21 @@ const logger = createLogger('TodosAccess')
 export class TodosAccess {
     constructor(
         private readonly docClient: DocumentClient = createDynamoDBClient(),
-        private readonly todoTable = process.env.GROUPS_TABLE
+        private readonly todoTable = process.env.TODOS_TABLE
     ) {}
 
-    async getAllTodos(): Promise<TodoItem[]> {
-        logger.info('Getting all todos')
-
-        const result = await this.docClient.scan({
-            TableName: this.todoTable
+    async getTodosByUserId(userId: string): Promise<TodoItem[]> {
+        const result = await this.docClient.query({
+            TableName: this.todoTable,
+            IndexName: process.env.INDEX_NAME,
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId
+            }
         }).promise()
-        
+
         const items = result.Items
-        return items as TodoItem[]      
+        return items as TodoItem[]
     }
 
     async createTodo(todoItem: TodoItem): Promise<TodoItem> {
@@ -37,32 +40,58 @@ export class TodosAccess {
         return todoItem
     }
 
-    async updateTodo(todoId: string, todoUpdate: TodoUpdate): Promise<TodoUpdate> {
-        await this.docClient.update({
+    async updateTodo(userId: string, todoId: string, todoUpdate: TodoUpdate): Promise<TodoUpdate> {
+
+        logger.info(`updating todo ${todoId} for user ${userId}`)
+
+        const result =  await this.docClient.update({
             TableName: this.todoTable,
             Key: {
-                todoId
+                todoId: todoId,
+                userId: userId,
             },
-            UpdateExpression: 'set #name = :name, dueDate = :dueDate, done = :done',
+            UpdateExpression: "SET #N=:name, #DD=:dueDate, #D=:done",
             ExpressionAttributeValues: {
-                ':name': todoUpdate.name,
-                ':dueDate': todoUpdate.dueDate,
-                ':done': todoUpdate.done
+                ":name": todoUpdate.name,
+                ":dueDate": todoUpdate.dueDate,
+                ":done": todoUpdate.done,
             },
-            ExpressionAttributeNames: {
-                '#name': 'name'
-            }
+            ReturnValues: "ALL_NEW",
         }).promise()
 
-        return todoUpdate
+        const updatedTodo = result.Attributes
+        return updatedTodo as TodoItem
     }
 
-    async deleteTodo(todoId: string): Promise<string> {
-        await this.docClient.delete({
+    async createAttchmentUrl(userId: string, todoId: string, url: string)
+        : Promise<TodoItem> {
+        logger.info(`set URL for todo ${todoId} for user ${userId}`)
+
+        const result = await this.docClient.update({
             TableName: this.todoTable,
             Key: {
-                todoId
-            }
+                todoId: todoId,
+                userId: userId,
+            },
+            UpdateExpression: "SET #URL=:url",
+            ExpressionAttributeValues: {
+                ":url": url,
+            },
+            ReturnValues: "ALL_NEW",
+        }).promise()
+
+        const attachment = result.Attributes
+        return attachment as TodoItem
+    }
+
+    async deleteTodo(userId:string, todoId: string): Promise<string> {
+        await this.docClient.delete({
+            
+            Key: {
+                todoId: todoId,
+                userId: userId,
+            },
+            TableName: this.todoTable
         }).promise()
 
         return todoId
@@ -79,24 +108,12 @@ export class TodosAccess {
         return result.Item as TodoItem
     }
 
-    async getTodosByUserId(userId: string): Promise<TodoItem[]> {
-        const result = await this.docClient.query({
-            TableName: this.todoTable,
-            IndexName: process.env.INDEX_NAME,
-            KeyConditionExpression: 'userId = :userId',
-            ExpressionAttributeValues: {
-                ':userId': userId
-            }
-        }).promise()
-
-        const items = result.Items
-        return items as TodoItem[]
-    }
+    
 }
 
 function createDynamoDBClient() {
     if(process.env.IS_OFFLINE){
-        console.log('Creating a local DynamoDB instance')
+        logger.info('Creating a local DynamoDB instance')
         return new XAWS.DynamoDB.DocumentClient({
         region: 'localhost',
         endpoint: 'http://localhost:8000'

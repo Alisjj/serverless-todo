@@ -2,7 +2,7 @@ import 'source-map-support/register'
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
-import { cors, httpErrorHandler } from 'middy/middlewares'
+import { cors } from 'middy/middlewares'
 
 import { updateTodo } from '../../businessLogic/todos'
 import { getUserId } from '../utils'
@@ -16,17 +16,13 @@ export const handler = middy(
     await updateTodo(
       userId,
       todoId,
-      updatedTodo.name,)
+      updatedTodo)
     return {
       statusCode: 204,
       body: ''
     }
   }
-)
-
-handler
-  .use(httpErrorHandler())
-  .use(
+).use(
     cors({
       credentials: true
     })

@@ -70,7 +70,7 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
       && key.kid           // The `kid` must be present to be useful for later
       && ((key.x5c && key.x5c.length) || (key.n && key.e)) // Has useful public keys
     ).map(key => {
-      return { kid: key.kid, nbf: key.nbf, publicKey: (key.x5c[0]) };
+      return { kid: key.kid, nbf: key.nbf, publicKey: certToPEM(key.x5c[0]) };
     }
     )
 
@@ -93,4 +93,10 @@ function getToken(authHeader: string): string {
   const token = split[1]
 
   return token
+}
+
+function certToPEM(cert) {
+  cert = cert.match(/.{1,64}/g).join('\n');
+  cert = `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`;
+  return cert;
 }

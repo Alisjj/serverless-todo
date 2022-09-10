@@ -6,13 +6,15 @@ import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 import * as uuid from 'uuid'
 import * as createError from 'http-errors'
 import { TodoUpdate } from '../models/TodoUpdate';
+import { createLogger } from '../utils/logger'
 
 // TODO: Implement businessLogic
 const todoAccess = new TodosAccess()
 const attachmentUtils = new AttachmentUtils()
+const logger = createLogger('TodosAccess')
 
-export async function getAllTodos(): Promise<TodoItem[]> {
-    return todoAccess.getAllTodos()
+export async function getTodosForUser(userId: string): Promise<TodoItem[]> {
+    return todoAccess.getTodosByUserId(userId)
 }
 
 export async function createTodo(
@@ -48,16 +50,16 @@ export async function updateTodo(
         throw new createError.Unauthorized(`User ${userId} is not authorized to update todo ${todoId}`)
     }
 
-    return await todoAccess.updateTodo(todoId, updateTodoRequest)
+    const todoUpdate = updateTodoRequest as TodoUpdate
+
+    return await todoAccess.updateTodo(userId, todoId, todoUpdate)
 }
 
-export async function getTodosForUser(userId: string): Promise<TodoItem[]> {
-    return todoAccess.getTodosByUserId(userId)
-}
+
 
 export async function deleteTodo(
-    todoId: string,
-    userId: string
+    userId: string,
+    todoId: string
 ): Promise<string> {
     const todo = await todoAccess.getTodoById(todoId)
 
@@ -65,7 +67,7 @@ export async function deleteTodo(
         throw new createError.Unauthorized('You are not authorized to delete this todo')
     }
 
-    return await todoAccess.deleteTodo(todoId)
+    return await todoAccess.deleteTodo(userId, todoId)
 }
 
 export async function generateUploadUrl(
@@ -78,5 +80,16 @@ export async function generateUploadUrl(
         throw new createError.Unauthorized('You are not authorized to update this todo')
     }
 
-    return await attachmentUtils.generateUploadUrl(todoId)
+    const generatedUrl = await attachmentUtils.generateUploadUrl(todoId)
+    const url = getPathFromUrl(generatedUrl)
+    logger.info(`generated upload url ${generatedUrl} for todo ${todoId} and path ${url}`)
+    await todoAccess.createAttchmentUrl(userId, todoId, url)
+    return url
+
 }
+
+function getPathFromUrl(url: string): string
+{
+    return url.split(/[#?]/)[0]
+}
+
