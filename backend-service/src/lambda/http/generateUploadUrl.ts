@@ -14,7 +14,7 @@ export const handler = middy(
     const userId = getUserId(event)
     console.log('userId', userId);
     
-    const url = await generateUploadUrl(todoId, userId)
+    const url = await generateUploadUrl(todoId)
     return {
       statusCode: 201,
       body: JSON.stringify({

@@ -13,7 +13,7 @@ const logger = createLogger('TodosAccess')
 
 export class TodosAccess {
     constructor(
-        private readonly docClient: DocumentClient = createDynamoDBClient(),
+        private readonly docClient: DocumentClient = new XAWS.DynamoDB.DocumentClient(),
         private readonly todoTable = process.env.TODOS_TABLE
     ) {}
 
@@ -47,78 +47,43 @@ export class TodosAccess {
         const result =  await this.docClient.update({
             TableName: this.todoTable,
             Key: {
-                todoId: todoId,
-                userId: userId,
+                "userId": userId,
+                "todoId": todoId
             },
-            UpdateExpression: "SET #N=:name, #DD=:dueDate, #D=:done",
+            UpdateExpression: "set #a = :a, #b = :b, #c = :c",
+            ExpressionAttributeNames: {
+                "#a": "name",
+                "#b": "dueDate",
+                "#c": "done"
+            },
             ExpressionAttributeValues: {
-                ":name": todoUpdate.name,
-                ":dueDate": todoUpdate.dueDate,
-                ":done": todoUpdate.done,
+                ":a": todoUpdate['name'],
+                ":b": todoUpdate['dueDate'],
+                ":c": todoUpdate['done']
             },
-            ReturnValues: "ALL_NEW",
+            ReturnValues: "ALL_NEW"
         }).promise()
 
         const updatedTodo = result.Attributes
         return updatedTodo as TodoItem
     }
 
-    async createAttchmentUrl(userId: string, todoId: string, url: string)
-        : Promise<TodoItem> {
-        logger.info(`set URL for todo ${todoId} for user ${userId}`)
-
-        const result = await this.docClient.update({
-            TableName: this.todoTable,
-            Key: {
-                todoId: todoId,
-                userId: userId,
-            },
-            UpdateExpression: "SET #URL=:url",
-            ExpressionAttributeValues: {
-                ":url": url,
-            },
-            ReturnValues: "ALL_NEW",
-        }).promise()
-
-        const attachment = result.Attributes
-        return attachment as TodoItem
-    }
-
     async deleteTodo(userId:string, todoId: string): Promise<string> {
-        await this.docClient.delete({
-            
-            Key: {
-                todoId: todoId,
-                userId: userId,
-            },
-            TableName: this.todoTable
-        }).promise()
+        console.log("Deleting todo");
 
-        return todoId
-    }
-
-    async getTodoById(todoId: string): Promise<TodoItem> {
-        const result = await this.docClient.get({
+        const params = {
             TableName: this.todoTable,
             Key: {
-                todoId
-            }
-        }).promise()
+                "userId": userId,
+                "todoId": todoId
+            },
+        };
 
-        return result.Item as TodoItem
+        const result = await this.docClient.delete(params).promise();
+        console.log(result);
+
+        return "" as string;
     }
 
     
-}
-
-function createDynamoDBClient() {
-    if(process.env.IS_OFFLINE){
-        logger.info('Creating a local DynamoDB instance')
-        return new XAWS.DynamoDB.DocumentClient({
-        region: 'localhost',
-        endpoint: 'http://localhost:8000'
-        })
-    }
-
-    return new XAWS.DynamoDB.DocumentClient()
 }
