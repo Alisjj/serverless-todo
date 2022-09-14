@@ -1,6 +1,6 @@
-# Serverless TODO
+# Serverless-Todo
 
-To implement this project, you need to implement a simple TODO application using AWS Lambda and Serverless framework. Search for all comments starting with the `TODO:` in the code to find the placeholders that you need to implement.
+A simple TODO app built using serverless framework and nodejs as the backend and REACT as the frontend.
 
 # Functionality of the application
 
@@ -40,13 +40,6 @@ You might also store an id of a user who created a TODO item.
    sls config credentials --provider aws --key YOUR_ACCESS_KEY_ID --secret YOUR_SECRET_KEY --profile serverless
    ```
    
-# Functions to be implemented
-
-To implement this project, you need to implement the following functions and configure them in the `serverless.yml` file:
-
-* `Auth` - this function should implement a custom authorizer for API Gateway that should be added to all other functions.
-
-* `GetTodos` - should return all TODOs for a current user. A user id can be extracted from a JWT token that is sent by the frontend
 
 It should return data that looks like this:
 
@@ -159,85 +152,6 @@ export const authConfig = {
 ## Authentication
 
 To implement authentication in your application, you would have to create an Auth0 application and copy "domain" and "client id" to the `config.ts` file in the `client` folder. We recommend using asymmetrically encrypted JWT tokens.
-
-# Best practices
-
-To complete this exercise, please follow the best practices from the 6th lesson of this course.
-
-## Logging
-
-The starter code comes with a configured [Winston](https://github.com/winstonjs/winston) logger that creates [JSON formatted](https://stackify.com/what-is-structured-logging-and-why-developers-need-it/) log statements. You can use it to write log messages like this:
-
-```ts
-import { createLogger } from '../../utils/logger'
-const logger = createLogger('auth')
-
-// You can provide additional information with every log statement
-// This information can then be used to search for log statements in a log storage system
-logger.info('User was authorized', {
-  // Additional information stored with a log statement
-  key: 'value'
-})
-```
-
-
-# Grading the submission
-
-Once you have finished developing your application, please set `apiId` and Auth0 parameters in the `config.ts` file in the `client` folder. A reviewer would start the React development server to run the frontend that should be configured to interact with your serverless application.
-
-**IMPORTANT**
-
-*Please leave your application running until a submission is reviewed. If implemented correctly it will cost almost nothing when your application is idle.*
-
-# Suggestions
-
-To store TODO items, you might want to use a DynamoDB table with local secondary index(es). A create a local secondary index you need to create a DynamoDB resource like this:
-
-```yml
-
-TodosTable:
-  Type: AWS::DynamoDB::Table
-  Properties:
-    AttributeDefinitions:
-      - AttributeName: partitionKey
-        AttributeType: S
-      - AttributeName: sortKey
-        AttributeType: S
-      - AttributeName: indexKey
-        AttributeType: S
-    KeySchema:
-      - AttributeName: partitionKey
-        KeyType: HASH
-      - AttributeName: sortKey
-        KeyType: RANGE
-    BillingMode: PAY_PER_REQUEST
-    TableName: ${self:provider.environment.TODOS_TABLE}
-    LocalSecondaryIndexes:
-      - IndexName: ${self:provider.environment.INDEX_NAME}
-        KeySchema:
-          - AttributeName: partitionKey
-            KeyType: HASH
-          - AttributeName: indexKey
-            KeyType: RANGE
-        Projection:
-          ProjectionType: ALL # What attributes will be copied to an index
-
-```
-
-To query an index you need to use the `query()` method like:
-
-```ts
-await this.dynamoDBClient
-  .query({
-    TableName: 'table-name',
-    IndexName: 'index-name',
-    KeyConditionExpression: 'paritionKey = :paritionKey',
-    ExpressionAttributeValues: {
-      ':paritionKey': partitionKeyValue
-    }
-  })
-  .promise()
-```
 
 # How to run the application
 
